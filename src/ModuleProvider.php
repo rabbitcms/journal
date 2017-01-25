@@ -2,8 +2,8 @@
 declare(strict_types = 1);
 namespace RabbitCMS\Journal;
 
-use ABC\Modules\Journal\Listeners\DBEventsListener;
 use Illuminate\Support\ServiceProvider;
+use RabbitCMS\Journal\Listeners\DBEventsListener;
 
 /**
  * Class ModuleProvider.

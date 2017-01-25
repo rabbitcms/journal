@@ -1,6 +1,7 @@
 {
-    "name": "rbbitcms/journal",
+    "name": "rabbitcms/journal",
     "description": "Laravel 5.3+ database journal.",
+    "license":"MIT",
     "authors": [
         {
             "name": "Kulyk Dmytro",
