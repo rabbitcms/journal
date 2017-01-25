@@ -1,7 +1,7 @@
 {
     "name": "rabbitcms/journal",
     "description": "Laravel 5.3+ database journal.",
-    "license":"MIT",
+    "license": "MIT",
     "authors": [
         {
             "name": "Kulyk Dmytro",
@@ -25,6 +25,7 @@
     },
     "extra": {
         "module": {
+            "enabled": false,
             "providers": "RabbitCMS\\Journal\\ModuleProvider"
         }
     }
