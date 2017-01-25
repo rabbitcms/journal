@@ -1,0 +1,30 @@
+{
+    "name": "rbbitcms/journal",
+    "description": "Laravel 5.3+ database journal.",
+    "authors": [
+        {
+            "name": "Kulyk Dmytro",
+            "email": "lnkvisitor.ts@gmail.com"
+        }
+    ],
+    "require": {
+        "rabbitcms/carrot": "^0.3",
+        "rabbitcms/modules": "^1.2",
+        "illuminate/database": "^5.3",
+        "illuminate/events": "^5.3",
+        "illuminate/support": "^5.3"
+    },
+    "autoload": {
+        "classmap": [
+            "src/Database/Migrations/"
+        ],
+        "psr-4": {
+            "RabbitCMS\\Journal\\": "src/"
+        }
+    },
+    "extra": {
+        "module": {
+            "providers": "RabbitCMS\\Journal\\ModuleProvider"
+        }
+    }
+}
