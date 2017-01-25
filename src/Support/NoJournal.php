@@ -1,6 +1,6 @@
 <?php
 declare(strict_types=1);
-namespace RabbitCMS\Support\Journal;
+namespace RabbitCMS\Journal\Support;
 
 /**
  * Interface NoJournal.

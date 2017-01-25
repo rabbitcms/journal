@@ -6,7 +6,7 @@ use Carbon\Carbon;
 use Illuminate\Database\Eloquent\Model as Eloquent;
 use Illuminate\Database\Eloquent\Relations\MorphTo;
 use RabbitCMS\Carrot\Eloquent\PrintableJson;
-use RabbitCMS\Support\Journal\NoJournal;
+use RabbitCMS\Journal\Support\NoJournal;
 
 /**
  * Class Journal.

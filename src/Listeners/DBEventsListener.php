@@ -5,7 +5,7 @@ namespace RabbitCMS\Journal\Listeners;
 use Illuminate\Database\Eloquent\Model as Eloquent;
 use Illuminate\Events\Dispatcher;
 use RabbitCMS\Journal\Entities\Journal;
-use RabbitCMS\Journal\NoJournal;
+use RabbitCMS\Journal\Support\NoJournal;
 
 /**
  * Class DBEventsListener.
