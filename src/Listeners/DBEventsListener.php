@@ -4,6 +4,7 @@ namespace RabbitCMS\Journal\Listeners;
 
 use Illuminate\Database\Eloquent\Model as Eloquent;
 use Illuminate\Events\Dispatcher;
+use Illuminate\Foundation\Application;
 use RabbitCMS\Journal\Entities\Journal;
 use RabbitCMS\Journal\Support\NoJournal;
 
@@ -85,7 +86,14 @@ final class DBEventsListener
     public function subscribe(Dispatcher $events)
     {
         foreach (['created', 'updated', 'deleted', 'restored'] as $method) {
-            $events->listen('eloquent.'.$method.': *', self::class.'@'.$method);
+            if (version_compare(Application::VERSION, '5.4') === -1) {
+                $call = self::class . '@' . $method;
+            } else {
+                $call = function (string $event, array $models) use ($method) {
+                    array_map([$this, $method], $models);
+                };
+            }
+            $events->listen('eloquent.' . $method . ': *', $call);
         }
     }
 }
