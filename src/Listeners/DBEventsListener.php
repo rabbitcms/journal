@@ -6,7 +6,7 @@ use Illuminate\Database\Eloquent\Model as Eloquent;
 use Illuminate\Events\Dispatcher;
 use Illuminate\Foundation\Application;
 use RabbitCMS\Journal\Entities\Journal;
-use RabbitCMS\Journal\Support\NoJournal;
+use RabbitCMS\Contracts\Journal\NoJournal;
 
 /**
  * Class DBEventsListener.

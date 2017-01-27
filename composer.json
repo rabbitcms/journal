@@ -11,6 +11,7 @@
     "require": {
         "rabbitcms/carrot": "^0.3",
         "rabbitcms/modules": "^1.2",
+        "rabbitcms/contracts": "^1.0",
         "illuminate/database": "^5.3",
         "illuminate/events": "^5.3",
         "illuminate/support": "^5.3"
