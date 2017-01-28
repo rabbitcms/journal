@@ -5,6 +5,7 @@ namespace RabbitCMS\Journal\Entities;
 use Carbon\Carbon;
 use Illuminate\Database\Eloquent\Model as Eloquent;
 use Illuminate\Database\Eloquent\Relations\MorphTo;
+use Illuminate\Support\Facades\Auth;
 use RabbitCMS\Carrot\Eloquent\PrintableJson;
 use RabbitCMS\Contracts\Journal\NoJournal;
 
@@ -67,7 +68,7 @@ class Journal extends Eloquent implements NoJournal
         parent::boot();
         static::creating(function (Journal $model) {
             $model->setAttribute('created_at', Carbon::now());
-            $user = \Auth::user();
+            $user = Auth::user();
             if ($user instanceof Eloquent) {
                 $model->owner()->associate($user);
             }
