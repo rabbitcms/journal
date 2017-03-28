@@ -16,7 +16,9 @@ class CreateJournalTable extends Migration
         Schema::create('journal', function (Blueprint $table) {
             $table->increments('id');
             $table->nullableMorphs('owner');
-            $table->morphs('entity');
+            $table->unsignedInteger('entity_id')->nullable()->default(null);
+            $table->string('entity_type');
+            $table->index(['entity_id', 'entity_type']);
             $table->enum('type', ['created', 'updated', 'deleted', 'restored']);
             $table->longText('previous')->nullable()->default(null);
             $table->longText('current')->nullable()->default(null);

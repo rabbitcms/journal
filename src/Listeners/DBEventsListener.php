@@ -3,6 +3,7 @@ declare(strict_types=1);
 namespace RabbitCMS\Journal\Listeners;
 
 use Illuminate\Database\Eloquent\Model as Eloquent;
+use Illuminate\Database\Eloquent\Relations\Pivot;
 use Illuminate\Events\Dispatcher;
 use Illuminate\Foundation\Application;
 use RabbitCMS\Journal\Entities\Journal;
@@ -44,6 +45,13 @@ final class DBEventsListener
             $previous = [];
             foreach (array_keys($next) as $key) {
                 $previous[$key] = $model->getOriginal($key);
+            }
+
+            if ($model instanceof Pivot) {
+                $previous = [
+                        $model->getForeignKey() => $model->getAttribute($model->getForeignKey()),
+                        $model->getRelatedKey() => $model->getAttribute($model->getRelatedKey())
+                    ] + $previous;
             }
 
             $journal = new Journal(['type' => 'updated', 'current' => $next, 'previous' => $previous]);
