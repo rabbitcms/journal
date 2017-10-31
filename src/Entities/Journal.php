@@ -6,7 +6,6 @@ use Carbon\Carbon;
 use Illuminate\Database\Eloquent\Model as Eloquent;
 use Illuminate\Database\Eloquent\Relations\MorphTo;
 use Illuminate\Support\Facades\Auth;
-use RabbitCMS\Carrot\Eloquent\PrintableJson;
 use RabbitCMS\Contracts\Journal\NoJournal;
 
 /**
@@ -21,8 +20,6 @@ use RabbitCMS\Contracts\Journal\NoJournal;
  */
 class Journal extends Eloquent implements NoJournal
 {
-    use PrintableJson;
-
     /**
      * Indicates if the model should be timestamped.
      *
@@ -93,5 +90,17 @@ class Journal extends Eloquent implements NoJournal
     public function owner():MorphTo
     {
         return $this->morphTo('owner');
+    }
+
+    /**
+     * Encode the given value as JSON.
+     *
+     * @param  mixed $value
+     *
+     * @return string
+     */
+    protected function asJson($value)
+    {
+        return json_encode($value, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE);
     }
 }

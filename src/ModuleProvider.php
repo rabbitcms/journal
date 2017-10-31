@@ -12,7 +12,6 @@ class ModuleProvider extends ServiceProvider
 {
     public function register()
     {
-
         $this->loadMigrationsFrom(__DIR__.'/Database/Migrations');
         $this->app->singleton(DBEventsListener::class);
         $this->app->make('events')->subscribe(DBEventsListener::class);
