@@ -17,37 +17,25 @@ final class DBEventsListener
 {
     use BelongsToModule;
 
-    public function created(Model $model): void
+    public function created(Model $model, ?Attributes\Journal $attribute): void
     {
-        $attributes = $model->getAttributes();
-        unset($attributes['created_at'], $attributes['updated_at']);
-        $journal = new Journal([
+        (new Journal([
             'type' => __FUNCTION__,
-            'current' => $attributes,
-        ]);
-        $journal->entity()->associate($model);
-        $journal->save();
+            'current' => $this->filter($model->getAttributes(), $attribute, ['created_at', 'updated_at']),
+        ]))
+            ->entity()->associate($model)
+            ->save();
     }
 
     public function updated(Model $model, ?Attributes\Journal $attribute): void
     {
-        $next = array_diff(array_keys($model->getDirty()), ['updated_at', 'created_at', 'deleted_at']);
+        $except = [$model::CREATED_AT, $model::UPDATED_AT, 'deleted_at'];
+        $dirty = $model->getDirty();
 
-        if ($attribute) {
-            if ($attribute->only !== null) {
-                $next = array_intersect($next, $attribute->only);
-            }
-            $next = array_diff($next, $attribute->except);
-        }
-
-        if (count($next) > 0) {
-            $previous = [];
-            $current = [];
+        if (count($dirty) > 0) {
             $attributes = $model->getAttributes();
-            foreach ($next as $key) {
-                $previous[$key] = $model->getRawOriginal($key);
-                $current[$key] = $attributes[$key] ?? null;
-            }
+            $previous = $this->filter(array_intersect_key($model->getRawOriginal(), $dirty), $attribute, $except);
+            $current = $this->filter(array_intersect_key($attributes, $dirty), $attribute, $except);
 
             if ($model instanceof Pivot) {
                 $previous = [
@@ -66,34 +54,45 @@ final class DBEventsListener
         }
     }
 
-    public function deleted(Model $model): void
+    public function deleted(Model $model, ?Attributes\Journal $attribute): void
     {
-        $journal = new Journal([
+        (new Journal([
             'type' => $model->exists ? __FUNCTION__ : 'forceDeleted',
-            'previous' => $model->getRawOriginal(),
-        ]);
-        $journal->entity()->associate($model);
-        $journal->save();
+            'previous' => $this->filter($model->getRawOriginal(), $attribute,
+                [$model::CREATED_AT, $model::UPDATED_AT, 'deleted_at']),
+        ]))
+            ->entity()->associate($model)
+            ->save();
     }
 
-    public function forceDeleted(Model $model): void
+    public function forceDeleted(Model $model, ?Attributes\Journal $attribute): void
     {
-        $journal = new Journal([
-            'type' => __FUNCTION__,
-            'previous' => $model->getRawOriginal(),
-        ]);
-        $journal->entity()->associate($model);
-        $journal->save();
+        $this->deleted($model, $attribute);
     }
 
-    public function restored(Model $model): void
+    public function restored(Model $model, ?Attributes\Journal $attribute): void
     {
-        $journal = new Journal([
+        (new Journal([
             'type' => __FUNCTION__,
-            'current' => $model->getRawOriginal(),
-        ]);
-        $journal->entity()->associate($model);
-        $journal->save();
+            'current' => $this->filter($model->getAttributes(), $attribute,
+                [$model::CREATED_AT, $model::UPDATED_AT, 'deleted_at']),
+        ]))
+            ->entity()->associate($model)
+            ->save();
+    }
+
+    protected function filter(array $fields, ?Attributes\Journal $attribute, array $except = [])
+    {
+        if ($attribute) {
+            if (is_array($attribute->only)) {
+                $fields = array_intersect_key($fields, array_combine($attribute->only, $attribute->only));
+            }
+            if ($attribute->except) {
+                $fields = array_diff_key($fields, array_combine($attribute->except, $attribute->except));
+            }
+        }
+
+        return $except ? array_diff_key($fields, array_combine($except, $except)) : $fields;
     }
 
     public function subscribe(Dispatcher $events)
@@ -102,31 +101,32 @@ final class DBEventsListener
         if ($module->config('enabled', true)) {
             $strict = $module->config('strict', false);
             foreach (['created', 'updated', 'deleted', 'restored', 'forceDeleted'] as $method) {
-                $events->listen('eloquent.'.$method.': *', function (string $event, array $models) use ($method, $strict) {
-                    if (! count($models) || $models[0] instanceof NoJournal) {
-                        return;
-                    }
-
-                    $attr = null;
-                    if (class_exists(\ReflectionAttribute::class)) {
-                        $class = new \ReflectionClass($models[0]);
-
-                        if (count($class->getAttributes(Attributes\NoJournal::class))) {
+                $events->listen('eloquent.'.$method.': *',
+                    function (string $event, array $models) use ($method, $strict) {
+                        if (! count($models) || $models[0] instanceof NoJournal) {
                             return;
                         }
 
-                        $attribute = $class->getAttributes(Attributes\Journal::class)[0] ?? null;
+                        $attr = null;
+                        if (class_exists(\ReflectionAttribute::class)) {
+                            $class = new \ReflectionClass($models[0]);
 
-                        if ($attribute) {
-                            $attr = $attribute->newInstance();
-                        } elseif ($strict) {
-                            return;
+                            if (count($class->getAttributes(Attributes\NoJournal::class))) {
+                                return;
+                            }
+
+                            $attribute = $class->getAttributes(Attributes\Journal::class)[0] ?? null;
+
+                            if ($attribute) {
+                                $attr = $attribute->newInstance();
+                            } elseif ($strict) {
+                                return;
+                            }
                         }
-                    }
 
-                    array_map(fn($model) => $this->{$method}($model, $attr), $models);
+                        array_map(fn($model) => $this->{$method}($model, $attr), $models);
 
-                });
+                    });
             }
         }
     }
