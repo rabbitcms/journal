@@ -1,6 +1,6 @@
 {
     "name": "rabbitcms/journal",
-    "description": "Laravel 5.3+ database journal.",
+    "description": "Laravel 7.0+ database journal.",
     "license": "MIT",
     "authors": [
         {
@@ -9,16 +9,13 @@
         }
     ],
     "require": {
-        "rabbitcms/modules": "^1.5 | ^2.0",
-        "rabbitcms/contracts": "^1.0",
+        "php": ">=7.1",
+        "rabbitcms/modules": "^2.0",
         "illuminate/database": ">=7.0",
         "illuminate/events": ">=7.0",
         "illuminate/support": ">=7.0"
     },
     "autoload": {
-        "classmap": [
-            "src/Database/Migrations/"
-        ],
         "psr-4": {
             "RabbitCMS\\Journal\\": "src/"
         }

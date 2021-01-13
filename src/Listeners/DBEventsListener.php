@@ -1,107 +1,120 @@
 <?php
+
 declare(strict_types=1);
+
 namespace RabbitCMS\Journal\Listeners;
 
-use Illuminate\Database\Eloquent\Model as Eloquent;
+use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\Pivot;
 use Illuminate\Events\Dispatcher;
 use Illuminate\Foundation\Application;
 use RabbitCMS\Journal\Entities\Journal;
 use RabbitCMS\Contracts\Journal\NoJournal;
+use RabbitCMS\Journal\Attributes;
 
-/**
- * Class DBEventsListener.
- */
 final class DBEventsListener
 {
-    /**
-     * @param Eloquent $model
-     */
-    public function created(Eloquent $model)
+    public function created(Model $model): void
     {
-        if ($model instanceof NoJournal) {
-            return;
-        }
-
         $attributes = $model->getAttributes();
         unset($attributes['created_at'], $attributes['updated_at']);
-        $journal = new Journal(['type' => 'created', 'current' => $attributes]);
+        $journal = new Journal([
+            'type' => __FUNCTION__,
+            'current' => $attributes,
+        ]);
         $journal->entity()->associate($model);
         $journal->save();
     }
 
-    /**
-     * @param Eloquent $model
-     */
-    public function updated(Eloquent $model)
+    public function updated(Model $model): void
     {
-        if ($model instanceof NoJournal) {
-            return;
-        }
+        $next = array_diff(array_keys($model->getDirty()), ['updated_at', 'created_at', 'deleted_at']);
 
-        $next = $model->getDirty();
-        unset($next['updated_at']);
+        $attribute = class_exists(\ReflectionAttribute::class) ?
+            (new \ReflectionClass($model))->getAttributes(Attributes\Journal::class)[0] ?? null : null;
+        if ($attribute) {
+            /* @var Attributes\Journal $attr */
+            $attr = $attribute->newInstance();
+            if ($attr->only !== null) {
+                $next = array_intersect($next, $attr->only);
+            }
+            $next = array_diff($next, $attr->except);
+        }
         if (count($next) > 0) {
             $previous = [];
-            foreach (array_keys($next) as $key) {
-                $previous[$key] = $model->getOriginal($key);
+            $current = [];
+            $attributes = $model->getAttributes();
+            foreach ($next as $key) {
+                $previous[$key] = $model->getRawOriginal($key);
+                $current[$key] = $attributes[$key] ?? null;
             }
 
             if ($model instanceof Pivot) {
                 $previous = [
-                        $model->getForeignKey() => $model->getAttribute($model->getForeignKey()),
-                        $model->getRelatedKey() => $model->getAttribute($model->getRelatedKey())
+                        $model->getForeignKey() => $attributes[$model->getForeignKey()] ?? null,
+                        $model->getRelatedKey() => $attributes[$model->getRelatedKey()] ?? null,
                     ] + $previous;
             }
 
-            $journal = new Journal(['type' => 'updated', 'current' => $next, 'previous' => $previous]);
+            $journal = new Journal([
+                'type' => __FUNCTION__,
+                'current' => $current,
+                'previous' => $previous,
+            ]);
             $journal->entity()->associate($model);
             $journal->save();
         }
     }
 
-    /**
-     * @param Eloquent $model
-     */
-    public function deleted(Eloquent $model)
+    public function deleted(Model $model): void
     {
-        if ($model instanceof NoJournal) {
-            return;
-        }
-
-        $journal = new Journal(['type' => 'deleted', 'previous' => $model->getOriginal()]);
+        $journal = new Journal([
+            'type' => $model->exists ? __FUNCTION__ : 'forceDeleted',
+            'previous' => $model->getRawOriginal(),
+        ]);
         $journal->entity()->associate($model);
         $journal->save();
     }
 
-    /**
-     * @param Eloquent $model
-     */
-    public function restored(Eloquent $model)
+    public function forceDeleted(Model $model): void
     {
-        if ($model instanceof NoJournal) {
-            return;
-        }
-
-        $journal = new Journal(['type' => 'restored', 'current' => $model->getOriginal()]);
+        $journal = new Journal([
+            'type' => __FUNCTION__,
+            'previous' => $model->getRawOriginal(),
+        ]);
         $journal->entity()->associate($model);
         $journal->save();
     }
 
-    /**
-     * @param Dispatcher $events
-     */
+    public function restored(Model $model): void
+    {
+        $journal = new Journal([
+            'type' => __FUNCTION__,
+            'current' => $model->getRawOriginal(),
+        ]);
+        $journal->entity()->associate($model);
+        $journal->save();
+    }
+
+    protected function canStore(Model $model): bool
+    {
+        if ($model instanceof NoJournal) {
+            return false;
+        }
+
+        if (class_exists(\ReflectionAttribute::class) && count((new \ReflectionClass($model))->getAttributes(Attributes\NoJournal::class))) {
+            return false;
+        }
+
+        return true;
+    }
+
     public function subscribe(Dispatcher $events)
     {
-        foreach (['created', 'updated', 'deleted', 'restored'] as $method) {
-            if (version_compare(Application::VERSION, '5.4') === -1) {
-                $call = self::class . '@' . $method;
-            } else {
-                $call = function (string $event, array $models) use ($method) {
-                    array_map([$this, $method], $models);
-                };
-            }
-            $events->listen('eloquent.' . $method . ': *', $call);
+        foreach (['created', 'updated', 'deleted', 'restored', 'forceDeleted'] as $method) {
+            $events->listen('eloquent.'.$method.': *', function (string $event, array $models) use ($method) {
+                count($models) && $this->canStore($models[0]) && array_map([$this, $method], $models);
+            });
         }
     }
 }
