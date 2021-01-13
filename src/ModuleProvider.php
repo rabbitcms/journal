@@ -1,5 +1,7 @@
 <?php
-declare(strict_types = 1);
+
+declare(strict_types=1);
+
 namespace RabbitCMS\Journal;
 
 use Illuminate\Events\Dispatcher;
@@ -10,7 +12,7 @@ class ModuleProvider extends ServiceProvider
 {
     public function register()
     {
-        $this->app->extend(Dispatcher::class, function(Dispatcher $events){
+        $this->app->extend(Dispatcher::class, function (Dispatcher $events) {
             $events->subscribe(DBEventsListener::class);
 
             return $events;

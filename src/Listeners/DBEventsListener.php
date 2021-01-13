@@ -11,9 +11,12 @@ use Illuminate\Foundation\Application;
 use RabbitCMS\Journal\Entities\Journal;
 use RabbitCMS\Contracts\Journal\NoJournal;
 use RabbitCMS\Journal\Attributes;
+use RabbitCMS\Modules\Concerns\BelongsToModule;
 
 final class DBEventsListener
 {
+    use BelongsToModule;
+
     public function created(Model $model): void
     {
         $attributes = $model->getAttributes();
@@ -26,20 +29,17 @@ final class DBEventsListener
         $journal->save();
     }
 
-    public function updated(Model $model): void
+    public function updated(Model $model, ?Attributes\Journal $attribute): void
     {
         $next = array_diff(array_keys($model->getDirty()), ['updated_at', 'created_at', 'deleted_at']);
 
-        $attribute = class_exists(\ReflectionAttribute::class) ?
-            (new \ReflectionClass($model))->getAttributes(Attributes\Journal::class)[0] ?? null : null;
         if ($attribute) {
-            /* @var Attributes\Journal $attr */
-            $attr = $attribute->newInstance();
-            if ($attr->only !== null) {
-                $next = array_intersect($next, $attr->only);
+            if ($attribute->only !== null) {
+                $next = array_intersect($next, $attribute->only);
             }
-            $next = array_diff($next, $attr->except);
+            $next = array_diff($next, $attribute->except);
         }
+
         if (count($next) > 0) {
             $previous = [];
             $current = [];
@@ -96,25 +96,38 @@ final class DBEventsListener
         $journal->save();
     }
 
-    protected function canStore(Model $model): bool
-    {
-        if ($model instanceof NoJournal) {
-            return false;
-        }
-
-        if (class_exists(\ReflectionAttribute::class) && count((new \ReflectionClass($model))->getAttributes(Attributes\NoJournal::class))) {
-            return false;
-        }
-
-        return true;
-    }
-
     public function subscribe(Dispatcher $events)
     {
-        foreach (['created', 'updated', 'deleted', 'restored', 'forceDeleted'] as $method) {
-            $events->listen('eloquent.'.$method.': *', function (string $event, array $models) use ($method) {
-                count($models) && $this->canStore($models[0]) && array_map([$this, $method], $models);
-            });
+        $module = self::module();
+        if ($module->config('enabled', true)) {
+            $strict = $module->config('strict', false);
+            foreach (['created', 'updated', 'deleted', 'restored', 'forceDeleted'] as $method) {
+                $events->listen('eloquent.'.$method.': *', function (string $event, array $models) use ($method, $strict) {
+                    if (! count($models) || $models[0] instanceof NoJournal) {
+                        return;
+                    }
+
+                    $attr = null;
+                    if (class_exists(\ReflectionAttribute::class)) {
+                        $class = new \ReflectionClass($models[0]);
+
+                        if (count($class->getAttributes(Attributes\NoJournal::class))) {
+                            return;
+                        }
+
+                        $attribute = $class->getAttributes(Attributes\Journal::class)[0] ?? null;
+
+                        if ($attribute) {
+                            $attr = $attribute->newInstance();
+                        } elseif ($strict) {
+                            return;
+                        }
+                    }
+
+                    array_map(fn($model) => $this->{$method}($model, $attr), $models);
+
+                });
+            }
         }
     }
 }
