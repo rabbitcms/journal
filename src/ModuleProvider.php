@@ -6,14 +6,14 @@ namespace RabbitCMS\Journal;
 
 use Illuminate\Events\Dispatcher;
 use Illuminate\Support\ServiceProvider;
-use RabbitCMS\Journal\Listeners\DBEventsListener;
+use RabbitCMS\Journal\Subscribers\DBEventsSubscriber;
 
 class ModuleProvider extends ServiceProvider
 {
     public function register()
     {
         $this->app->extend(Dispatcher::class, function (Dispatcher $events) {
-            $events->subscribe(DBEventsListener::class);
+            $events->subscribe(DBEventsSubscriber::class);
 
             return $events;
         });

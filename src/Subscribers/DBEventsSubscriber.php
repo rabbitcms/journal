@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace RabbitCMS\Journal\Listeners;
+namespace RabbitCMS\Journal\Subscribers;
 
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\Pivot;
@@ -13,7 +13,7 @@ use RabbitCMS\Contracts\Journal\NoJournal;
 use RabbitCMS\Journal\Attributes;
 use RabbitCMS\Modules\Concerns\BelongsToModule;
 
-final class DBEventsListener
+final class DBEventsSubscriber
 {
     use BelongsToModule;
 
@@ -42,6 +42,10 @@ final class DBEventsListener
                         $model->getForeignKey() => $attributes[$model->getForeignKey()] ?? null,
                         $model->getRelatedKey() => $attributes[$model->getRelatedKey()] ?? null,
                     ] + $previous;
+            }
+
+            if (count($previous) === 0 && count($current) === 0) {
+                return;
             }
 
             $journal = new Journal([
