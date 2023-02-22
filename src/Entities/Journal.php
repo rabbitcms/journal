@@ -1,5 +1,7 @@
 <?php
+
 declare(strict_types=1);
+
 namespace RabbitCMS\Journal\Entities;
 
 use Carbon\Carbon;
@@ -11,12 +13,12 @@ use RabbitCMS\Contracts\Journal\NoJournal;
 /**
  * Class Journal.
  *
- * @property-read int      $id
- * @property-read int      $owner_id
+ * @property-read int $id
+ * @property-read int $owner_id
  * @property-read Eloquent $entity
- * @property-read Carbon   $created_at
- * @property-read array    $previous
- * @property-read array    $current
+ * @property-read Carbon $created_at
+ * @property-read array $previous
+ * @property-read array $current
  */
 class Journal extends Eloquent implements NoJournal
 {
@@ -42,10 +44,9 @@ class Journal extends Eloquent implements NoJournal
     protected $casts = [
         'previous' => 'array',
         'current' => 'array',
+        'created_at' => 'datetime',
     ];
-
-    protected $dates = ['created_at'];
-
+    
     /**
      * The attributes that are mass assignable.
      *
@@ -77,7 +78,7 @@ class Journal extends Eloquent implements NoJournal
      *
      * @return MorphTo
      */
-    public function entity():MorphTo
+    public function entity(): MorphTo
     {
         return $this->morphTo('entity');
     }
@@ -87,7 +88,7 @@ class Journal extends Eloquent implements NoJournal
      *
      * @return MorphTo
      */
-    public function owner():MorphTo
+    public function owner(): MorphTo
     {
         return $this->morphTo('owner');
     }
@@ -95,7 +96,7 @@ class Journal extends Eloquent implements NoJournal
     /**
      * Encode the given value as JSON.
      *
-     * @param  mixed $value
+     * @param  mixed  $value
      *
      * @return string
      */
